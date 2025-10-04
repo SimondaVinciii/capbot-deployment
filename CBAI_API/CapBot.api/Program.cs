@@ -227,6 +227,21 @@ public class Program
 
         var app = builder.Build();
 
+        // Apply EF Core migrations automatically at startup (Code-First)
+        using (var scope = app.Services.CreateScope())
+        {
+            try
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<MyDbContext>();
+                dbContext.Database.Migrate();
+                Log.Information("Database migrations applied successfully");
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error applying EF Core migrations at startup");
+            }
+        }
+
         //<=====Seed Base data system=====>
         using (var scope = app.Services.CreateScope())
         {
