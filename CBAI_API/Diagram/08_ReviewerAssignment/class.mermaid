@@ -1,0 +1,21 @@
+classDiagram
+    direction LR
+
+    %% Controller layer
+    class ReviewerAssignmentController
+
+    %% Service interface and implementation
+    class IReviewerAssignmentService
+    class ReviewerAssignmentService
+    ReviewerAssignmentController --> IReviewerAssignmentService : "calls"
+    ReviewerAssignmentService ..|> IReviewerAssignmentService : "implements"
+
+    %% Dependencies
+    class IUnitOfWork
+    class IMapper
+    class ISkillMatchingService
+    ReviewerAssignmentService --> IUnitOfWork : "uses"
+    ReviewerAssignmentService --> IMapper : "uses"
+    ReviewerAssignmentService --> ISkillMatchingService : "uses"
+
+    

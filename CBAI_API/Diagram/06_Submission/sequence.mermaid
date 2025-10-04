@@ -1,0 +1,49 @@
+sequenceDiagram
+    actor Supervisor
+    participant SubmissionController
+    participant ISubmissionService
+    participant SubmissionService
+    participant Submission
+    participant IUnitOfWork
+
+    Note over Supervisor, SubmissionController: Submission Creation Flow
+    Supervisor->>SubmissionController: POST /api/submission/create (CreateSubmissionDTO)
+    activate SubmissionController
+    SubmissionController->>ISubmissionService: CreateSubmission(dto, userId)
+    activate ISubmissionService
+    ISubmissionService->>SubmissionService: CreateSubmission(dto, userId)
+    activate SubmissionService
+    SubmissionService->>Submission: Create New Submission
+    Submission-->>SubmissionService: Submission Created
+    SubmissionService->>IUnitOfWork: Commit()
+    IUnitOfWork-->>SubmissionService: Commit Result
+    SubmissionService-->>ISubmissionService: Creation Result
+    deactivate SubmissionService
+    ISubmissionService-->>SubmissionController: Creation Result
+    deactivate ISubmissionService
+    SubmissionController-->>Supervisor: Return API Response
+    deactivate SubmissionController
+
+    Note over Supervisor, SubmissionController: Submission Resubmit Flow
+    Supervisor->>SubmissionController: POST /api/submission/resubmit (ResubmitSubmissionDTO)
+    activate SubmissionController
+    SubmissionController->>ISubmissionService: ResubmitSubmission(dto, userId)
+    activate ISubmissionService
+    ISubmissionService->>SubmissionService: ResubmitSubmission(dto, userId)
+    activate SubmissionService
+    SubmissionService->>Submission: Get Submission By Id
+    Submission-->>SubmissionService: Submission Entity
+    alt Valid for Resubmit
+        SubmissionService->>Submission: Update Status to UnderReview, Increase Round
+        Submission-->>SubmissionService: Status & Round Updated
+        SubmissionService->>IUnitOfWork: Commit()
+        IUnitOfWork-->>SubmissionService: Commit Result
+        SubmissionService-->>ISubmissionService: Resubmit Result
+    else Invalid for Resubmit
+        SubmissionService-->>ISubmissionService: Error Result
+    end
+    deactivate SubmissionService
+    ISubmissionService-->>SubmissionController: Resubmit Result
+    deactivate ISubmissionService
+    SubmissionController-->>Supervisor: Return API Response
+    deactivate SubmissionController

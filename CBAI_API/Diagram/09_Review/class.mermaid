@@ -1,0 +1,29 @@
+classDiagram
+    direction LR
+
+    %% Controller layer
+    class ReviewController
+
+    %% Service interface and implementation
+    class IReviewService
+    class ReviewService
+    ReviewController --> IReviewService : "calls"
+    ReviewService ..|> IReviewService : "implements"
+
+    %% Dependencies
+    class IUnitOfWork
+    ReviewService --> IUnitOfWork : "uses"
+
+    %% Entities
+    class Review
+    class ReviewCriteriaScore
+    class EvaluationCriteria
+
+    %% IUnitOfWork provides access to entity repositories
+    IUnitOfWork --> Review
+    IUnitOfWork --> ReviewCriteriaScore
+    IUnitOfWork --> EvaluationCriteria
+
+    %% Simplified entity relationships
+    Review o-- ReviewCriteriaScore
+    ReviewCriteriaScore --> EvaluationCriteria

@@ -1,0 +1,209 @@
+version: '3.9' # Specify the Compose file version for compatibility
+
+services:
+  capbot-agent:
+    build:
+      context: ./capbot_agent
+      dockerfile: Dockerfile
+    container_name: capbot-agent
+    ports:
+      - "8000:8000"
+    environment:
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      DATABASE_URL: ${DATABASE_URL}
+      CHROMA_DB_PATH: /app/chroma_db
+      CHROMA_COLLECTION_NAME: ${CHROMA_COLLECTION_NAME:-topics_collection}
+      SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.8}
+      TRENDING_API_URL: ${TRENDING_API_URL}
+      TRENDING_API_KEY: ${TRENDING_API_KEY}
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8000
+      DEBUG: ${DEBUG:-False}
+      EMBEDDING_BACKEND: ${EMBEDDING_BACKEND:-google}
+      EMBEDDING_MODEL_NAME: ${EMBEDDING_MODEL_NAME:-models/text-embedding-004}
+    volumes:
+      - chroma_data:/app/chroma_db
+      - ./capbot_agent/config.env:/app/config.env:ro
+    networks:
+      - capbot-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1', 8000)); s.close()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - sqlserver
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.capbot-agent.rule: "Host(`agent.local`)"
+      traefik.http.services.capbot-agent.loadbalancer.server.port: "8000"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  capbot-api:
+    build:
+      context: ./CBAI_API
+      dockerfile: Dockerfile
+    container_name: capbot-api
+    ports:
+      - "7190:7190"
+    environment:
+      ConnectionStrings__AppDb: ${DOTNET_DATABASE_URL}
+      GeminiAI__ApiKey: ${GEMINI_API_KEY}
+      GeminiAI__PromptModel: ${GEMINI_PROMPT_MODEL:-gemini-2.0-flash}
+      GeminiAI__EmbeddingModel: ${GEMINI_EMBEDDING_MODEL:-gemini-embedding-001}
+      Elasticsearch__Url: ${ELASTICSEARCH_URL:-http://elasticsearch:9200}
+      Elasticsearch__DefaultIndex: ${ELASTICSEARCH_INDEX:-topics}
+      Agent__BaseUrl: ${AGENT_BASE_URL:-http://capbot-agent:8000}
+      JwtSettings__SecretKey: ${JWT_SECRET_KEY}
+      JwtSettings__Issuer: ${JWT_ISSUER:-CapBot}
+      JwtSettings__Audience: ${JWT_AUDIENCE:-CapBot-Users}
+      JwtSettings__TokenExpiryInHours: ${JWT_EXPIRY_HOURS:-24}
+      EmailConfiguration__From: ${EMAIL_FROM}
+      EmailConfiguration__SmtpServer: ${EMAIL_SMTP_SERVER}
+      EmailConfiguration__Port: ${EMAIL_PORT:-465}
+      EmailConfiguration__UserName: ${EMAIL_USERNAME}
+      EmailConfiguration__Password: ${EMAIL_PASSWORD}
+      EmailConfiguration__DisplayName: ${EMAIL_DISPLAY_NAME:-CapBot Team}
+      AdminAccount__Email: ${ADMIN_EMAIL}
+      AdminAccount__Password: ${ADMIN_PASSWORD}
+      AdminAccount__UserName: ${ADMIN_USERNAME}
+      AdminAccount__PhoneNumber: ${ADMIN_PHONE}
+      AppSettings__HomeUrl: ${HOME_URL:-https://localhost:7190}
+      AppSettings__HomeApiDomain: ${HOME_API_DOMAIN:-localhost:7190}
+      AppSettings__CdnUrl: ${CDN_URL:-https://localhost:7190}
+      AppSettings__FileSizeLimit: ${FILE_SIZE_LIMIT:-20}
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: http://+:7190
+    volumes:
+      - api_logs:/app/Logs
+    networks:
+      - capbot-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "dotnet", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - sqlserver
+      - elasticsearch
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.capbot-api.rule: "Host(`api.local`)"
+      traefik.http.services.capbot-api.loadbalancer.server.port: "7190"
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: capbot-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: ${SQLSERVER_SA_PASSWORD}
+      MSSQL_PID: Express
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - capbot-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SQLSERVER_SA_PASSWORD} -Q 'SELECT 1' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: capbot-elasticsearch
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx1g"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - capbot-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+
+  traefik:
+    image: traefik:v2.10
+    container_name: capbot-traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - capbot-network
+    restart: unless-stopped
+    profiles:
+      - proxy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+
+volumes:
+  chroma_data:
+  sqlserver_data:
+  elasticsearch_data:
+  api_logs:
+
+networks:
+  capbot-network:
+    driver: bridge
