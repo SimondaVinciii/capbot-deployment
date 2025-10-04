@@ -30,15 +30,21 @@ public class Program
 
         // ==== Add Serilog ======
         var hookApi = configuration.GetValue<string>("Serilog:HookAPI");
-        Log.Logger = new LoggerConfiguration()
+        var loggerConfig = new LoggerConfiguration()
             .ReadFrom.Configuration(configuration)
-            .Enrich.WithProperty("Hand Bag Summer 2025", "Hand Bag Summer 2025 Logger")
-            .WriteTo.Http(
+            .Enrich.WithProperty("CapBot API", "CapBot API Logger");
+            
+        // Only add HTTP sink if HookAPI is configured
+        if (!string.IsNullOrEmpty(hookApi))
+        {
+            loggerConfig.WriteTo.Http(
                 hookApi,
                 batchFormatter: new Serilog.Sinks.Http.BatchFormatters.ArrayBatchFormatter(),
                 queueLimitBytes: null,
-                httpClient: new CustomHttpClient(configuration))
-            .CreateLogger();
+                httpClient: new CustomHttpClient(configuration));
+        }
+        
+        Log.Logger = loggerConfig.CreateLogger();
         builder.Host.UseSerilog();
 
         // Add services to the container
