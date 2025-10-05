@@ -21,9 +21,12 @@ services:
       DEBUG: ${DEBUG:-False}
       EMBEDDING_BACKEND: ${EMBEDDING_BACKEND:-google}
       EMBEDDING_MODEL_NAME: ${EMBEDDING_MODEL_NAME:-models/text-embedding-004}
+      SSL_KEYFILE: ${SSL_KEYFILE:-/app/certs/server.key}
+      SSL_CERTFILE: ${SSL_CERTFILE:-/app/certs/server.crt}
     volumes:
       - chroma_data:/app/chroma_db
       - ./capbot_agent/config.env:/app/config.env:ro
+      - ./traefik/certs:/app/certs:ro
     networks:
       - capbot-network
     restart: unless-stopped
@@ -71,7 +74,7 @@ services:
       GeminiAI__EmbeddingModel: ${GEMINI_EMBEDDING_MODEL:-gemini-embedding-001}
       Elasticsearch__Url: ${ELASTICSEARCH_URL:-http://elasticsearch:9200}
       Elasticsearch__DefaultIndex: ${ELASTICSEARCH_INDEX:-topics}
-      Agent__BaseUrl: ${AGENT_BASE_URL:-http://capbot-agent:8000}
+      Agent__BaseUrl: ${AGENT_BASE_URL:-http://152.42.227.169:8000/}
       JwtSettings__SecretKey: ${JWT_SECRET_KEY}
       JwtSettings__Issuer: ${JWT_ISSUER:-CapBot}
       JwtSettings__Audience: ${JWT_AUDIENCE:-CapBot-Users}

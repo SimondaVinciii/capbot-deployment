@@ -50,7 +50,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://your-frontend-domain.vercel.app",  # Vercel frontend domain
+        "https://sep-cap-bot-ynll.vercel.app/",  # Vercel frontend domain
         "https://*.vercel.app",  # All Vercel subdomains
         "http://localhost:3000",  # Local development
         "http://localhost:3001",  # Local development alternative
@@ -117,13 +117,19 @@ async def root():
 
 # Run application
 if __name__ == "__main__":
+    # Configure SSL if certificates are available
+    ssl_config = {}
+    if hasattr(config, 'SSL_KEYFILE') and config.SSL_KEYFILE:
+        ssl_config['ssl_keyfile'] = config.SSL_KEYFILE
+    if hasattr(config, 'SSL_CERTFILE') and config.SSL_CERTFILE:
+        ssl_config['ssl_certfile'] = config.SSL_CERTFILE
+    
     uvicorn.run(
         "main:app",
         host=config.APP_HOST,
         port=config.APP_PORT,
         reload=config.DEBUG,
         log_level="info",
-        ssl_keyfile=config.SSL_KEYFILE if hasattr(config, 'SSL_KEYFILE') else None,
-        ssl_certfile=config.SSL_CERTFILE if hasattr(config, 'SSL_CERTFILE') else None
+        **ssl_config
     )
 
