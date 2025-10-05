@@ -1,4 +1,4 @@
-version: '3.9' # Specify the Compose file version for compatibility
+version: '3.9'
 
 services:
   capbot-agent:
@@ -41,21 +41,6 @@ services:
       traefik.http.routers.capbot-agent.entrypoints: "websecure"
       traefik.http.routers.capbot-agent.tls: "true"
       traefik.http.services.capbot-agent.loadbalancer.server.port: "8000"
-      # Add docs routing
-      traefik.http.routers.capbot-agent-docs.rule: "Host(`${DROPLET_IP}`) && PathPrefix(`/docs`)"
-      traefik.http.routers.capbot-agent-docs.entrypoints: "websecure"
-      traefik.http.routers.capbot-agent-docs.tls: "true"
-      traefik.http.routers.capbot-agent-docs.service: "capbot-agent"
-      traefik.http.routers.capbot-agent-docs.middlewares: "capbot-agent-stripprefix"
-      traefik.http.middlewares.capbot-agent-stripprefix.stripprefix.prefixes: "/docs"
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: '1.0'
-        reservations:
-          memory: 512M
-          cpus: '0.5'
 
   capbot-api:
     build:
@@ -112,14 +97,6 @@ services:
       traefik.http.routers.capbot-api.entrypoints: "websecure"
       traefik.http.routers.capbot-api.tls: "true"
       traefik.http.services.capbot-api.loadbalancer.server.port: "7190"
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-          cpus: '2.0'
-        reservations:
-          memory: 1G
-          cpus: '0.5'
 
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -141,14 +118,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: '1.0'
-        reservations:
-          memory: 512M
-          cpus: '0.25'
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
@@ -171,14 +140,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: '1.0'
-        reservations:
-          memory: 1G
-          cpus: '0.5'
 
   traefik:
     image: traefik:v2.10
@@ -206,21 +167,12 @@ services:
     restart: unless-stopped
     profiles:
       - proxy
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '0.5'
-        reservations:
-          memory: 128M
-          cpus: '0.1'
 
 volumes:
   chroma_data:
   sqlserver_data:
   elasticsearch_data:
   api_logs:
-  letsencrypt_data:
 
 networks:
   capbot-network:
