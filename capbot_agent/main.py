@@ -49,9 +49,16 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=[
+        "https://your-frontend-domain.vercel.app",  # Vercel frontend domain
+        "https://*.vercel.app",  # All Vercel subdomains
+        "http://localhost:3000",  # Local development
+        "http://localhost:3001",  # Local development alternative
+        "https://152.42.227.169",  # Your droplet IP with HTTPS
+        "http://152.42.227.169",  # Your droplet IP with HTTP (fallback)
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -115,6 +122,8 @@ if __name__ == "__main__":
         host=config.APP_HOST,
         port=config.APP_PORT,
         reload=config.DEBUG,
-        log_level="info"
+        log_level="info",
+        ssl_keyfile=config.SSL_KEYFILE if hasattr(config, 'SSL_KEYFILE') else None,
+        ssl_certfile=config.SSL_CERTFILE if hasattr(config, 'SSL_CERTFILE') else None
     )
 

@@ -32,6 +32,10 @@ class Config:
     APP_HOST: str = os.getenv("APP_HOST", "0.0.0.0")
     APP_PORT: int = int(os.getenv("APP_PORT", "8000"))
     DEBUG: bool = os.getenv("DEBUG", "True").lower() == "true"
+    
+    # SSL Configuration
+    SSL_KEYFILE: Optional[str] = os.getenv("SSL_KEYFILE")
+    SSL_CERTFILE: Optional[str] = os.getenv("SSL_CERTFILE")
 
     # Embedding Configuration
     # Options: 'sentence' (SentenceTransformers) or 'google' (Google Generative AI embeddings)

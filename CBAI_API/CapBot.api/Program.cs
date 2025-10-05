@@ -82,7 +82,19 @@ public class Program
         builder.Services.AddCors(opts =>
         {
             opts.AddPolicy("corspolicy",
-                build => { build.WithOrigins("*").AllowAnyMethod().AllowAnyHeader(); });
+                build => { 
+                    build.WithOrigins(
+                        "https://your-frontend-domain.vercel.app",  // Vercel frontend domain
+                        "https://*.vercel.app",  // All Vercel subdomains
+                        "http://localhost:3000",  // Local development
+                        "http://localhost:3001",  // Local development alternative
+                        "https://152.42.227.169",  // Your droplet IP with HTTPS
+                        "http://152.42.227.169"  // Your droplet IP with HTTP (fallback)
+                    )
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials(); 
+                });
         });
 
         //<=====Add Database=====>
@@ -128,7 +140,7 @@ public class Program
         })
         .AddJwtBearer(options =>
         {
-            options.RequireHttpsMetadata = false;
+            options.RequireHttpsMetadata = true;
             options.SaveToken = true;
             options.TokenValidationParameters = new TokenValidationParameters
             {

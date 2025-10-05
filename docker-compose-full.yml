@@ -37,7 +37,9 @@ services:
       - sqlserver
     labels:
       traefik.enable: "true"
-      traefik.http.routers.capbot-agent.rule: "Host(`agent.local`)"
+      traefik.http.routers.capbot-agent.rule: "Host(`${DROPLET_IP}`) && PathPrefix(`/agent`)"
+      traefik.http.routers.capbot-agent.entrypoints: "websecure"
+      traefik.http.routers.capbot-agent.tls: "true"
       traefik.http.services.capbot-agent.loadbalancer.server.port: "8000"
     deploy:
       resources:
@@ -99,7 +101,9 @@ services:
       - elasticsearch
     labels:
       traefik.enable: "true"
-      traefik.http.routers.capbot-api.rule: "Host(`api.local`)"
+      traefik.http.routers.capbot-api.rule: "Host(`${DROPLET_IP}`) && PathPrefix(`/api`)"
+      traefik.http.routers.capbot-api.entrypoints: "websecure"
+      traefik.http.routers.capbot-api.tls: "true"
       traefik.http.services.capbot-api.loadbalancer.server.port: "7190"
     deploy:
       resources:
@@ -178,12 +182,18 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
     ports:
       - "80:80"
       - "443:443"
       - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/certs:/etc/traefik/certs:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
     networks:
       - capbot-network
     restart: unless-stopped
@@ -203,6 +213,7 @@ volumes:
   sqlserver_data:
   elasticsearch_data:
   api_logs:
+  letsencrypt_data:
 
 networks:
   capbot-network:
